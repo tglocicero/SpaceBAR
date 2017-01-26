@@ -59,7 +59,7 @@ function create() {
 
 function update() {
     player.body.gravity.y = gravity
-    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR)) {
+    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) || game.input.pointer1.isDown) {
         boostPower++;
         player.body.velocity.y = - (100 * boostPower);
     } else {
