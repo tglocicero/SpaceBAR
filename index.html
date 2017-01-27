@@ -15,14 +15,27 @@
 
 var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
 var time = 0;
+var score = 0;
 var gravity = 2500;
-var boostPower = 1;
+var horizontalGrav = 10;
+var boostPower = .5;
 var asteroid;
 var groundDetails;
 var background;
 var player;
 var pad;
 var obstacles;
+var dustTrail;
+var obstacleDensity = .05 ;
+var scrollSpeed = 500;
+var resetPeriod = false;
+var kickback = 125;
+var levelUp;
+var lvl = 1;
+var multiplyer = 1;
+var blood;
+var bloodCase;
+var health = 100;
 
 function preload() {
 	game.load.image('background', 'assets/background.png');
@@ -30,11 +43,13 @@ function preload() {
     game.load.image('groundDetails', 'assets/groundDetails.png');
     game.load.image('player', 'assets/player.png');
     game.load.image('dust', 'assets/dust.png');
-    game.load.image('asteroid', 'assets/asteroid.png');
+    game.load.image('asteroid', 'assets/player.png');
+    game.load.image('levelUp', 'assets/levelUp.png');
+    game.load.image('blood', 'assets/blood.png');
+    game.load.image('bloodCase', 'assets/bloodCase.png');
 }
 
 function create() {
-
     game.physics.startSystem(Phaser.Physics.ARCADE);
     game.input.gamepad.start();
     pad = game.input.gamepad.pad1;
@@ -46,30 +61,110 @@ function create() {
 
     player = game.add.sprite(250, 300, 'player');
     game.physics.arcade.enable(player);
-    player.body.gravity.x = 100;
+    player.body.gravity.x = horizontalGrav;
     player.body.bounce.set(.5);
     player.body.collideWorldBounds = true;
     player.scale.setTo(.2, .2);
 
+    levelUp = game.add.sprite(100, 220, 'levelUp');
+
+    dustTrail = game.add.group();
     generateTrail();
 
     obstacles = game.add.group();
     generateObstacles();
+
+    text = game.add.text(20, 10, '');
+    text.align = 'left';
+    text.font = 'Arial Black';
+    text.fontSize = 25;
+    text.fontWeight = 'bold';
+    text.stroke = '#000000';
+    text.strokeThickness = 6;
+    text.fill = '#FFFFFF';
+
+    level = game.add.text(20, 50, 'LEVEL 1');
+    level.align = 'left';
+    level.font = 'Arial Black';
+    level.fontSize = 25;
+    level.fontWeight = 'bold';
+    level.stroke = '#000000';
+    level.strokeThickness = 6;
+    level.fill = '#FFFFFF';
+
+    blood = game.add.sprite(20, 95, 'blood');
+    bloodCase = game.add.sprite(20, 95, 'bloodCase');
 }
 
 function update() {
+    time++;
+    score += 1*multiplyer;
+    text.text = score;
+
+    // player controls
     player.body.gravity.y = gravity
-    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) || game.input.Pointer.isDown) {
+    player.body.gravity.x = horizontalGrav;
+    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) ) {
         boostPower++;
         player.body.velocity.y = - (100 * boostPower);
     } else {
         boostPower = 1;
     }
+
+    // Draw Stuff
     generateTrail();
-    generateObstacles();
+    if (!resetPeriod) {
+        generateObstacles();
+        game.world.sendToBack(levelUp);
+    }
     game.world.bringToTop(player);
-    game.physics.arcade.collide(player, obstacles);
-    // game.phsyics.arcade.collide(obstacles, obstacles);
+
+
+    // set up other interactions
+    if (game.physics.arcade.collide(player, obstacles)) {
+        // player.body.velocity.x += 10;
+    }
+    if (player.x > 766) {
+        player.body.velocity.x = -kickback;
+        resetPeriod = true;
+        game.world.bringToTop(levelUp);
+        lvl++;
+        multiplyer = multiplyer * 2;
+        level.text = 'LEVEL ' + lvl;
+        health = 100;
+        blood.scale.set(health/100,1);
+        destroyAsteroids();
+        destroyTrail();
+        increaseSpeed();
+    } 
+    if (player.x < 4) {
+        health--;
+        blood.scale.set(health/100,1);
+    }
+    if (obstacles.total == 0 && player.body.velocity.x >= 1) {
+        time = 0;
+        resetPeriod = false;
+    }
+    game.world.bringToTop(level);
+    game.world.bringToTop(text);
+    game.world.bringToTop(blood);
+    game.world.bringToTop(bloodCase);
+
+    if (health == 0) {
+        game.world.sendToBack(level);
+        game.world.sendToBack(text);
+        game.world.sendToBack(blood);
+        game.world.sendToBack(bloodCase);
+        gameOver = game.add.text(57, 150, 'GAME OVER\n' + score);
+        gameOver.align = 'center';
+        gameOver.font = 'Arial Black';
+        gameOver.fontSize = 100;
+        gameOver.fontWeight = 'bold';
+        gameOver.stroke = '#000000';
+        gameOver.strokeThickness = 12;
+        gameOver.fill = '#FFFFFF';
+        game.paused = true;
+    }
 }
 
 function generateTrail() {
@@ -80,7 +175,8 @@ function generateTrail() {
         dust = game.add.sprite(player.x + x, player.y + y,'dust');
         game.physics.arcade.enable(dust);
         dust.scale.setTo(r,r);
-        dust.body.velocity.x = -1000;
+        dust.body.velocity.x = -scrollSpeed;
+        dustTrail.add(dust);
     }
 }
 
@@ -89,14 +185,32 @@ function generateObstacles() {
     var q = game.rnd.frac();
     var x = game.rnd.integerInRange(-10,10);
     var y = game.rnd.integerInRange(-500,500);
-    if (q < .1) {
+    if (q < obstacleDensity) { // .1 is ideal
         asteroid = game.add.sprite(1000 + x, 220 + y,'asteroid');
         game.physics.arcade.enable(asteroid);
         asteroid.scale.setTo(s,s);
-        asteroid.body.velocity.x = -1000;
-        // asteroid.body.setCircle(86);
+        asteroid.body.velocity.x = -scrollSpeed;
+        asteroid.body.bounce.set(.1);
         obstacles.add(asteroid);
     }
+}
+
+function destroyAsteroids() {
+    obstacles.destroy();
+    obstacles = game.add.group();
+}
+
+function destroyTrail() {
+    dustTrail.destroy();
+    dustTrail = game.add.group();
+}
+
+function increaseSpeed() {
+    obstacleDensity = obstacleDensity * 1.1;
+    scrollSpeed = scrollSpeed * 1.25;
+    horizontalGrav = horizontalGrav * 1.25;
+    kickback = kickback * 1.1;
+    background.body.angularVelocity = background.body.angularVelocity*1.1;
 }
 
 </script>
