@@ -18,7 +18,7 @@ var time = 0;
 var score = 0;
 var gravity = 2500;
 var horizontalGrav = 10;
-var boostPower = .5;
+var boostPower = 1;
 var asteroid;
 var groundDetails;
 var background;
@@ -35,6 +35,7 @@ var lvl = 1;
 var multiplyer = 1;
 var blood;
 var bloodCase;
+var pointer;
 var health = 100;
 
 function preload() {
@@ -52,6 +53,8 @@ function preload() {
 function create() {
     game.physics.startSystem(Phaser.Physics.ARCADE);
     game.input.gamepad.start();
+    // pointer = new Pointer(game, 1, PointerMode.CONTACT);
+    game.input.addPointer();
     pad = game.input.gamepad.pad1;
 
 	background = game.add.sprite(400, 1500, 'background');
@@ -104,7 +107,7 @@ function update() {
     // player controls
     player.body.gravity.y = gravity
     player.body.gravity.x = horizontalGrav;
-    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) ) {
+    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) || game.input.pointer1.isDown) {
         boostPower++;
         player.body.velocity.y = - (100 * boostPower);
     } else {
