@@ -27,7 +27,7 @@ var pad;
 var obstacles;
 var dustTrail;
 var obstacleDensity = .05 ;
-var scrollSpeed = 500;
+var scrollSpeed = 250;
 var resetPeriod = false;
 var kickback = 125;
 var levelUp;
@@ -48,6 +48,8 @@ function preload() {
     game.load.image('levelUp', 'assets/levelUp.png');
     game.load.image('blood', 'assets/blood.png');
     game.load.image('bloodCase', 'assets/bloodCase.png');
+    game.load.image('damage', 'assets/damage.png');
+    // game.load.image('freshHealth', 'assets/freshHealth.png');
 }
 
 function create() {
@@ -68,8 +70,6 @@ function create() {
     player.body.bounce.set(.5);
     player.body.collideWorldBounds = true;
     player.scale.setTo(.2, .2);
-
-    levelUp = game.add.sprite(100, 220, 'levelUp');
 
     dustTrail = game.add.group();
     generateTrail();
@@ -95,6 +95,9 @@ function create() {
     level.strokeThickness = 6;
     level.fill = '#FFFFFF';
 
+    levelUp = game.add.sprite(100, 220, 'levelUp');
+    damage = game.add.sprite(0,0, 'damage');
+    freshHealth = game.add.sprite(20, 95, 'freshHealth');
     blood = game.add.sprite(20, 95, 'blood');
     bloodCase = game.add.sprite(20, 95, 'bloodCase');
 }
@@ -103,6 +106,8 @@ function update() {
     time++;
     score += 1*multiplyer;
     text.text = score;
+    game.world.sendToBack(damage);
+    // game.world.sendToBack(freshHealth);
 
     // player controls
     player.body.gravity.y = gravity
@@ -119,6 +124,7 @@ function update() {
     if (!resetPeriod) {
         generateObstacles();
         game.world.sendToBack(levelUp);
+        game.world.sendToBack(freshHealth);
     }
     game.world.bringToTop(player);
 
@@ -131,6 +137,7 @@ function update() {
         player.body.velocity.x = -kickback;
         resetPeriod = true;
         game.world.bringToTop(levelUp);
+        game.world.bringToTop(freshHealth);
         lvl++;
         multiplyer = multiplyer * 2;
         level.text = 'LEVEL ' + lvl;
@@ -142,6 +149,7 @@ function update() {
     } 
     if (player.x < 4) {
         health--;
+        game.world.bringToTop(damage)
         blood.scale.set(health/100,1);
     }
     if (obstacles.total == 0 && player.body.velocity.x >= 1) {
@@ -188,7 +196,7 @@ function generateObstacles() {
     var q = game.rnd.frac();
     var x = game.rnd.integerInRange(-10,10);
     var y = game.rnd.integerInRange(-500,500);
-    if (q < obstacleDensity) { // .1 is ideal
+    if (q < scrollSpeed/10000) { // .1 is ideal
         asteroid = game.add.sprite(1000 + x, 220 + y,'asteroid');
         game.physics.arcade.enable(asteroid);
         asteroid.scale.setTo(s,s);
