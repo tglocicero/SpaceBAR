@@ -1,9 +1,9 @@
 <!doctype html> 
 <html lang="en"> 
 <head> 
-	<meta charset="UTF-8" />
-	<title>SpaceBAR - A Game by Tucker LoCicero</title>
-	<script type="text/javascript" src="js/phaser.min.js"></script>
+    <meta charset="UTF-8" />
+    <title>SpaceBAR - A Game by Tucker LoCicero</title>
+    <script type="text/javascript" src="js/phaser.min.js"></script>
     <style type="text/css">
         body {
             margin: 50px;
@@ -11,55 +11,77 @@
     </style>
 </head>
 <body>
-<script type="text/javascript">
+    <script type="text/javascript">
 
-var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
-var time = 0;
-var score = 0;
-var gravity = 2500;
-var horizontalGrav = 10;
-var boostPower = 1;
-var asteroid;
-var groundDetails;
-var background;
-var player;
-var pad;
-var obstacles;
-var dustTrail;
-var obstacleDensity = .05 ;
-var scrollSpeed = 250;
-var resetPeriod = false;
-var kickback = 125;
-var levelUp;
-var lvl = 1;
-var multiplyer = 1;
-var blood;
-var bloodCase;
-var pointer;
-var health = 100;
+        var game = new Phaser.Game(800, 600, Phaser.AUTO, '', { preload: preload, create: create, update: update });
+        var time = 0;
+        var score = 0;
+        var gravity = 2500;
+        var horizontalGrav = 10;
+        var boostPower = 1;
+        var asteroid;
+        var groundDetails;
+        var background;
+        var player;
+        var ding;
+        var pad;
+        var obstacles;
+        var dustTrail;
+        var obstacleDensity = .05 ;
+        var scrollSpeed = 250;
+        var resetPeriod = false;
+        var kickback = 125;
+        var levelUp;
+        var lvl = 1;
+        var multiplyer = 1;
+        var blood;
+        var bloodCase;
+        var pointer;
+        var health = 100;
+        var cursor;
+        var isUsingGamePad = false;
+        var combo = 1;
+        var songResumeCountdown = 0;
 
-function preload() {
-	game.load.image('background', 'assets/background.png');
-    game.load.image('ground', 'assets/ground.png');;
-    game.load.image('groundDetails', 'assets/groundDetails.png');
-    game.load.image('player', 'assets/player.png');
-    game.load.image('dust', 'assets/dust.png');
-    game.load.image('asteroid', 'assets/player.png');
-    game.load.image('levelUp', 'assets/levelUp.png');
-    game.load.image('blood', 'assets/blood.png');
-    game.load.image('bloodCase', 'assets/bloodCase.png');
-    game.load.image('damage', 'assets/damage.png');
-    // game.load.image('freshHealth', 'assets/freshHealth.png');
+        function preload() {
+            game.load.image('background', 'assets/background.png');
+            game.load.image('ground', 'assets/ground.png');;
+            game.load.image('groundDetails', 'assets/groundDetails.png');
+            game.load.image('player', 'assets/player.png');
+            game.load.image('dust', 'assets/dust.png');
+            game.load.image('asteroid', 'assets/player.png');
+            game.load.image('levelUp', 'assets/levelUp.png');
+            game.load.image('blood', 'assets/blood.png');
+            game.load.image('bloodCase', 'assets/bloodCase.png');
+            game.load.image('damage', 'assets/damage.png');
+            game.load.audio('ding', 'assets/ding.mp3');
+            game.load.audio('hit', 'assets/hit.mp3');
+            game.load.audio('levelUpMusic', 'assets/levelUpMusic.mp3');
+            game.load.audio('hurt', 'assets/hurt.mp3');
+            game.load.image('explosionBox', 'assets/explosionBox.png');
+            game.load.audio('song', 'assets/song.mp3');
+// game.load.image('freshHealth', 'assets/freshHealth.png');
 }
 
 function create() {
     game.physics.startSystem(Phaser.Physics.ARCADE);
     game.input.gamepad.start();
-    // pointer = new Pointer(game, 1, PointerMode.CONTACT);
-    game.input.addPointer();
     pad = game.input.gamepad.pad1;
+    game.input.addPointer();
 
-	background = game.add.sprite(400, 1500, 'background');
+    ding = game.add.sound('ding');
+    ding.volume = .25;
+    hit = game.add.sound('hit');
+    hit.volume = .5;
+    levelUpMusic = game.add.sound('levelUpMusic');
+    levelUpMusic.volume = 3;
+    hurt = game.add.sound('hurt');
+    hurt.volume = 2;
+    song = game.add.sound('song');
+    song.play();
+    song.volume = 2;
+
+    background = game.add.sprite(400, 1500, 'background');
     game.physics.arcade.enable(background);
     background.anchor.setTo(.5, .5);
     background.body.angularVelocity = -1;
@@ -104,19 +126,36 @@ function create() {
 
 function update() {
     time++;
-    score += 1*multiplyer;
-    text.text = score;
-    game.world.sendToBack(damage);
-    // game.world.sendToBack(freshHealth);
-
-    // player controls
-    player.body.gravity.y = gravity
-    player.body.gravity.x = horizontalGrav;
-    if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) || game.input.pointer1.isDown) {
-        boostPower++;
-        player.body.velocity.y = - (100 * boostPower);
+    if (songResumeCountdown > 0) {
+        songResumeCountdown--;
     } else {
-        boostPower = 1;
+        song.resume();
+    }
+    // score += .01 * multiplyer;
+    text.text = Math.floor(score);
+    game.world.sendToBack(damage);
+
+    // player movement
+    player.body.gravity.x = horizontalGrav;
+    if(navigator.webkitGetGamepads) {
+        var gp = navigator.webkitGetGamepads()[0];
+        isUsingGamePad = true;
+    } else {
+        var gp = navigator.getGamepads()[0];
+        isUsingGamePad = true;
+    }
+    if (gp != null) {
+        cursor = -(gp.axes[4] + 1) * 283 + 567;
+        player.body.velocity.y = (cursor - 283)*5;
+    } else {
+        player.body.gravity.x = horizontalGrav;
+        player.body.gravity.y = gravity
+        if (game.input.keyboard.isDown(Phaser.Keyboard.SPACEBAR) || game.input.pointer1.isDown) {
+            boostPower++;
+            player.body.velocity.y = - (100 * boostPower);
+        } else {
+            boostPower = 1;
+        }
     }
 
     // Draw Stuff
@@ -130,15 +169,15 @@ function update() {
 
 
     // set up other interactions
-    if (game.physics.arcade.collide(player, obstacles)) {
-        // player.body.velocity.x += 10;
-    }
+    game.physics.arcade.collide(player, obstacles, collisionHandler, null, this);
     if (player.x > 766) {
         player.body.velocity.x = -kickback;
         resetPeriod = true;
         game.world.bringToTop(levelUp);
-        game.world.bringToTop(freshHealth);
+        // game.world.bringToTop(freshHealth);
+        levelUpMusic.play();
         lvl++;
+        combo = 1;
         multiplyer = multiplyer * 2;
         level.text = 'LEVEL ' + lvl;
         health = 100;
@@ -149,6 +188,9 @@ function update() {
     } 
     if (player.x < 4) {
         health--;
+        song.pause();
+        songResumeCountdown = 10;
+        hurt.play();
         game.world.bringToTop(damage)
         blood.scale.set(health/100,1);
     }
@@ -166,7 +208,7 @@ function update() {
         game.world.sendToBack(text);
         game.world.sendToBack(blood);
         game.world.sendToBack(bloodCase);
-        gameOver = game.add.text(57, 150, 'GAME OVER\n' + score);
+        gameOver = game.add.text(57, 150, 'GAME OVER\n' + Math.floor(score));
         gameOver.align = 'center';
         gameOver.font = 'Arial Black';
         gameOver.fontSize = 100;
@@ -187,6 +229,7 @@ function generateTrail() {
         game.physics.arcade.enable(dust);
         dust.scale.setTo(r,r);
         dust.body.velocity.x = -scrollSpeed;
+        dust.events.onOutOfBounds.add(resetObject, this);
         dustTrail.add(dust);
     }
 }
@@ -196,14 +239,15 @@ function generateObstacles() {
     var q = game.rnd.frac();
     var x = game.rnd.integerInRange(-10,10);
     var y = game.rnd.integerInRange(-500,500);
-    if (q < scrollSpeed/10000) { // .1 is ideal
-        asteroid = game.add.sprite(1000 + x, 220 + y,'asteroid');
-        game.physics.arcade.enable(asteroid);
-        asteroid.scale.setTo(s,s);
-        asteroid.body.velocity.x = -scrollSpeed;
-        asteroid.body.bounce.set(.1);
-        obstacles.add(asteroid);
-    }
+if (q < scrollSpeed/10000) { // .1 is ideal
+    asteroid = game.add.sprite(1000 + x, 220 + y,'asteroid');
+    game.physics.arcade.enable(asteroid);
+    asteroid.scale.setTo(s,s);
+    asteroid.body.velocity.x = -scrollSpeed;
+    asteroid.body.bounce.set(.1);
+    asteroid.events.onOutOfBounds.add(resetObject, this);
+    obstacles.add(asteroid);
+}
 }
 
 function destroyAsteroids() {
@@ -214,6 +258,37 @@ function destroyAsteroids() {
 function destroyTrail() {
     dustTrail.destroy();
     dustTrail = game.add.group();
+}
+
+function resetObject (o) {
+    o.kill();
+}
+
+function collisionHandler (player, obstacle) {
+    if (player.x + player.body.width > obstacle.x) {
+        explodeObstacle(obstacle);
+        ding.play();
+    } else {
+        hit.play();
+    }
+}
+
+function explodeObstacle(obstacle) {
+    var tween1 = game.add.tween(obstacle).to( { alpha: 0 }, 50, "Linear", true, 0, 1, true);
+    var tween2 = game.add.tween(obstacle).to( { alpha: 0 }, 50, "Linear", true, 0, 0, false);
+    tween1.chain(tween2);
+    obstacle.body.enable = false;
+    plusPoints = game.add.text(obstacle.x + 10, obstacle.y + 10, '+ ' + multiplyer*combo);
+    plusPoints.align = 'right';
+    plusPoints.font = 'Arial Black';
+    plusPoints.fontSize = 35;
+    plusPoints.fontWeight = 'bold';
+    plusPoints.stroke = '#000000';
+    plusPoints.strokeThickness = 6;
+    plusPoints.fill = '#F0F0FF';
+    game.add.tween(plusPoints).to( { alpha: 0 }, 1000, "Linear", true);
+    score += multiplyer*combo;
+    combo++;
 }
 
 function increaseSpeed() {
