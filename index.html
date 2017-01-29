@@ -143,12 +143,14 @@ function update() {
 
     // player movement
     player.body.gravity.x = horizontalGrav;
-    if(navigator.webkitGetGamepads) {
-        var gp = navigator.webkitGetGamepads()[0];
-        isUsingGamePad = true;
-    } else {
-        var gp = navigator.getGamepads()[0];
-        isUsingGamePad = true;
+    if(navigator.userAgent.indexOf("Chrome") != -1) {
+        if(navigator.webkitGetGamepads) {
+            var gp = navigator.webkitGetGamepads()[0];
+            isUsingGamePad = true;
+        } else {
+            var gp = navigator.getGamepads()[0];
+            isUsingGamePad = true;
+        }
     }
     if (gp != null) {
         cursor = -(gp.axes[4] + 1) * 283 + 567;
