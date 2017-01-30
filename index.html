@@ -42,6 +42,7 @@
         var isUsingGamePad = false;
         var combo = 1;
         var songResumeCountdown = 0;
+        var maxHealth = 100;
 
         function preload() {
             game.load.image('background', 'assets/background.png');
@@ -188,7 +189,9 @@ function update() {
         combo = 1;
         multiplyer = multiplyer * 2;
         level.text = 'LEVEL ' + lvl;
-        health = 100;
+        maxHealth = maxHealth*1.1;
+        health = maxHealth;
+        bloodCase.scale.set(health/100,1);
         blood.scale.set(health/100,1);
         destroyAsteroids();
         destroyTrail();
@@ -280,7 +283,7 @@ function collisionHandler (player, obstacle) {
         ding.play();
     } else {
         hurt.play();
-        health -= obstacle.height/10;
+        health -= 1 + Math.ceil(obstacle.height/50);
         blood.scale.set(health/100,1);
     }
 }
@@ -304,9 +307,9 @@ function explodeObstacle(obstacle) {
 }
 
 function increaseSpeed() {
-    obstacleDensity = obstacleDensity * 1.1;
-    scrollSpeed = scrollSpeed * 1.25;
-    horizontalGrav = horizontalGrav * 1.25;
+    obstacleDensity = obstacleDensity * 1.05;
+    scrollSpeed = scrollSpeed * 1.2;
+    horizontalGrav = horizontalGrav * 1.2;
     kickback = kickback * 1.1;
     background.body.angularVelocity = background.body.angularVelocity*1.1;
 }
