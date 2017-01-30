@@ -27,7 +27,7 @@
         var pad;
         var obstacles;
         var dustTrail;
-        var obstacleDensity = .05 ;
+        var obstacleDensity = .04;
         var scrollSpeed = 250;
         var resetPeriod = false;
         var kickback = 125;
@@ -248,19 +248,21 @@ function generateTrail() {
 }
 
 function generateObstacles() {
-    var s = game.rnd.frac() + .2;
+    var s = game.rnd.frac()*.8 + .4;
     var q = game.rnd.frac();
     var x = game.rnd.integerInRange(-10,10);
     var y = game.rnd.integerInRange(-500,500);
-if (q < scrollSpeed/10000) { // .1 is ideal
-    asteroid = game.add.sprite(1000 + x, 220 + y,'asteroid');
-    game.physics.arcade.enable(asteroid);
-    asteroid.scale.setTo(s,s);
-    asteroid.body.velocity.x = -scrollSpeed;
-    asteroid.body.bounce.set(.1);
-    asteroid.events.onOutOfBounds.add(resetObject, this);
-    obstacles.add(asteroid);
-}
+    if (q < scrollSpeed/10000) { // .1 is ideal
+        asteroid = game.add.sprite(1000 + x, 220 + y,'asteroid');
+        game.physics.arcade.enable(asteroid);
+        asteroid.scale.setTo(s,s);
+        asteroid.body.velocity.x = -scrollSpeed;
+        asteroid.body.bounce.set(.1);
+        asteroid.events.onOutOfBounds.add(resetObject, this);
+        if (asteroid.height > player.height*2) {
+            obstacles.add(asteroid);
+        }
+    }
 }
 
 function destroyAsteroids() {
@@ -307,7 +309,7 @@ function explodeObstacle(obstacle) {
 }
 
 function increaseSpeed() {
-    obstacleDensity = obstacleDensity * 1.05;
+    obstacleDensity = obstacleDensity * .99;
     scrollSpeed = scrollSpeed * 1.2;
     horizontalGrav = horizontalGrav * 1.2;
     kickback = kickback * 1.1;
